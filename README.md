@@ -32,4 +32,3 @@ Ideas:
 - better submit.sh
 - using GPU
 - Jakobi is slow:
-  - 
