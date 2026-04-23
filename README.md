@@ -25,4 +25,11 @@ u_new = 0.25 * (u[1:-1, :-2] + u[1:-1, 2:] + u[:-2, 1:-1] + u[2:, 1:-1])
 ```
 this line is basically a 2d matrix eval, run a lot repetitively `MAX_ITER`, this is what we need to optimise.
 
-Ideas: parallelism, better submit.sh, using GPU
+Ideas:
+- parallelism
+  - loading the buildings
+  - calculating the buildings
+- better submit.sh
+- using GPU
+- Jakobi is slow:
+  - 
