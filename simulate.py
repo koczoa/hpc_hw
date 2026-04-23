@@ -61,13 +61,13 @@ if __name__ == '__main__':
         all_u0[i] = u0
         all_interior_mask[i] = interior_mask
 
+    print("loadin done")
+
     # Run jacobi iterations for each floor plan
     MAX_ITER = 20_000
     ABS_TOL = 1e-4
 
-
     times = []
-
 
     all_u = np.empty_like(all_u0)
     for i, (u0, interior_mask) in enumerate(zip(all_u0, all_interior_mask)):
@@ -79,6 +79,7 @@ if __name__ == '__main__':
         times.append(time.perf_counter() - select_start)
 
         all_u[i] = u
+        print(f"{i}. done")
 
 
 
