@@ -1,0 +1,61 @@
+No GPU on this node, CUDA module not loaded
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28265300: <static_sweep> in cluster <dcc> Done
+
+Job <static_sweep> was submitted from host <n-62-30-2> by user <s260170> in cluster <dcc> at Thu Apr 23 15:15:41 2026
+Job was executed on host(s) <32*n-62-13-6>, in queue <hpc>, as user <s260170> in cluster <dcc> at Thu Apr 23 15:40:41 2026
+</zhome/89/0/229203> was used as the home directory.
+</zhome/89/0/229203/miniproject> was used as the working directory.
+Started at Thu Apr 23 15:40:41 2026
+Terminated at Thu Apr 23 16:10:12 2026
+Results reported at Thu Apr 23 16:10:12 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -J static_sweep
+#BSUB -q hpc
+#BSUB -W 02:00
+#BSUB -n 32
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=4GB]"
+#BSUB -o static_sweep_%J.out
+#BSUB -e static_sweep_%J.err
+
+source /dtu/projects/02613_2025/conda/conda_init.sh
+conda activate 02613_2026
+
+for W in 1 2 4 8 16 32; do
+    echo "=== Workers: $W ===" >&2
+    python simulate_static.py 100 $W > /dev/null
+done
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   5213.22 sec.
+    Max Memory :                                 142 MB
+    Average Memory :                             71.17 MB
+    Total Requested Memory :                     131072.00 MB
+    Delta Memory :                               130930.00 MB
+    Max Swap :                                   -
+    Max Processes :                              20
+    Max Threads :                                24
+    Run time :                                   1771 sec.
+    Turnaround time :                            3271 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <static_sweep_28265300.err> for stderr output of this job.
+

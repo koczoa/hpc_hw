@@ -1,0 +1,15 @@
+#!/bin/bash
+#BSUB -J cuda_test
+#BSUB -q c02613
+#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -W 00:30
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=4GB]"
+#BSUB -o cuda_%J.out
+#BSUB -e cuda_%J.err
+
+source /dtu/projects/02613_2025/conda/conda_init.sh
+conda activate 02613_2026
+
+python simulate_cuda.py 20 > /dev/null

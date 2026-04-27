@@ -1,0 +1,57 @@
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28307525: <cupy_test> in cluster <dcc> Done
+
+Job <cupy_test> was submitted from host <hpclogin1> by user <s260170> in cluster <dcc> at Mon Apr 27 19:13:27 2026
+Job was executed on host(s) <4*n-62-18-13>, in queue <c02613>, as user <s260170> in cluster <dcc> at Mon Apr 27 19:13:59 2026
+</zhome/89/0/229203> was used as the home directory.
+</zhome/89/0/229203/miniproject> was used as the working directory.
+Started at Mon Apr 27 19:13:59 2026
+Terminated at Mon Apr 27 19:14:54 2026
+Results reported at Mon Apr 27 19:14:54 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -J cupy_test
+#BSUB -q c02613
+#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -W 00:30
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=4GB]"
+#BSUB -o cupy_%J.out
+#BSUB -e cupy_%J.err
+
+source /dtu/projects/02613_2025/conda/conda_init.sh
+conda activate 02613_2026
+
+python simulate_cupy.py 20 > /dev/null
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   51.63 sec.
+    Max Memory :                                 126 MB
+    Average Memory :                             111.33 MB
+    Total Requested Memory :                     16384.00 MB
+    Delta Memory :                               16258.00 MB
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                10
+    Run time :                                   55 sec.
+    Turnaround time :                            87 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <cupy_28307525.err> for stderr output of this job.
+

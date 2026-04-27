@@ -1,0 +1,57 @@
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28307417: <cuda_test> in cluster <dcc> Done
+
+Job <cuda_test> was submitted from host <n-62-20-9> by user <s260170> in cluster <dcc> at Mon Apr 27 18:21:40 2026
+Job was executed on host(s) <4*n-62-18-13>, in queue <c02613>, as user <s260170> in cluster <dcc> at Mon Apr 27 18:21:42 2026
+</zhome/89/0/229203> was used as the home directory.
+</zhome/89/0/229203/miniproject> was used as the working directory.
+Started at Mon Apr 27 18:21:42 2026
+Terminated at Mon Apr 27 18:22:06 2026
+Results reported at Mon Apr 27 18:22:06 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -J cuda_test
+#BSUB -q c02613
+#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -W 00:30
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=4GB]"
+#BSUB -o cuda_%J.out
+#BSUB -e cuda_%J.err
+
+source /dtu/projects/02613_2025/conda/conda_init.sh
+conda activate 02613_2026
+
+python simulate_cuda.py 20 > /dev/null
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   21.06 sec.
+    Max Memory :                                 101 MB
+    Average Memory :                             101.00 MB
+    Total Requested Memory :                     16384.00 MB
+    Delta Memory :                               16283.00 MB
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                10
+    Run time :                                   24 sec.
+    Turnaround time :                            26 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <cuda_28307417.err> for stderr output of this job.
+

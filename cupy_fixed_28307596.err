@@ -1,0 +1,5 @@
+Loaded module: cuda/11.8
+=== ORIGINAL CuPy (sync every iteration), N=20 ===
+# elapsed: 49.447 s, N: 20, cupy
+=== FIXED CuPy (sync every 1000 iterations), N=20 ===
+# elapsed: 46.692 s, N: 20, cupy_fixed (check every 1000)

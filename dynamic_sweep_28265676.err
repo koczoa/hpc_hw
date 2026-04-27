@@ -1,0 +1,12 @@
+=== Workers: 1 ===
+# elapsed: 774.539 s, workers: 1, N: 100
+=== Workers: 2 ===
+# elapsed: 404.218 s, workers: 2, N: 100
+=== Workers: 4 ===
+# elapsed: 203.422 s, workers: 4, N: 100
+=== Workers: 8 ===
+# elapsed: 126.275 s, workers: 8, N: 100
+=== Workers: 16 ===
+# elapsed: 71.448 s, workers: 16, N: 100
+=== Workers: 32 ===
+# elapsed: 52.256 s, workers: 32, N: 100
