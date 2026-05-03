@@ -1,88 +1,128 @@
 from os.path import join
 import sys
-import time
-
 import numpy as np
 import cupy as cp
+import time
 
-
-LOAD_DIR = '/dtu/projects/02613_2025/data/modified_swiss_dwellings/'
-MAX_ITER = 20_000
-ABS_TOL = 1e-4
-CHECK_EVERY = 1000   # Sync only every K iterations (was: every iteration)
-
-
-def load_data(bid):
+def load_data(load_dir, bid):
     SIZE = 512
     u = np.zeros((SIZE + 2, SIZE + 2))
-    u[1:-1, 1:-1] = np.load(join(LOAD_DIR, f"{bid}_domain.npy"))
-    interior_mask = np.load(join(LOAD_DIR, f"{bid}_interior.npy"))
+    u[1:-1, 1:-1] = np.load(join(load_dir, f"{bid}_domain.npy"))
+    interior_mask = np.load(join(load_dir, f"{bid}_interior.npy"))
     return u, interior_mask
 
 
-def jacobi_cupy_fixed(u, interior_mask, max_iter, atol):
-    """CuPy Jacobi with convergence checked every CHECK_EVERY iterations.
+def jacobi_cupy_fixed(u, interior_mask, max_iter, atol=1e-4, check_every=100):
+    u_d    = cp.asarray(u, dtype=cp.float64)
+    mask_d = cp.asarray(interior_mask)
 
-    The original implementation checked `if delta < atol` every iteration,
-    which forced a host-device sync each time (delta lives on GPU).
-    By checking only every K iterations, the GPU can run K iterations
-    back-to-back without stalling for the CPU.
-    """
-    u = cp.copy(u)
     for i in range(max_iter):
-        u_new = 0.25 * (u[1:-1, :-2] + u[1:-1, 2:]
-                      + u[:-2, 1:-1] + u[2:, 1:-1])
-        u_new_interior = u_new[interior_mask]
-        delta = cp.abs(u[1:-1, 1:-1][interior_mask] - u_new_interior).max()
-        u[1:-1, 1:-1][interior_mask] = u_new_interior
+        u_new = 0.25 * (u_d[1:-1, :-2] + u_d[1:-1, 2:]
+                      + u_d[:-2, 1:-1] + u_d[2:, 1:-1])
+        u_new_interior = u_new[mask_d]
 
-        # Only sync every CHECK_EVERY iterations
-        if (i + 1) % CHECK_EVERY == 0:
+        # Only sync with CPU every check_every iterations
+        if i % check_every == 0:
+            delta = cp.abs(u_d[1:-1, 1:-1][mask_d] - u_new_interior).max()
             if float(delta) < atol:
                 break
-    return u
+
+        u_d[1:-1, 1:-1][mask_d] = u_new_interior
+
+    return cp.asnumpy(u_d)
 
 
-def summary_stats(u_host, interior_mask_host):
-    u_interior = u_host[1:-1, 1:-1][interior_mask_host]
-    return {
-        'mean_temp':    u_interior.mean(),
-        'std_temp':     u_interior.std(),
-        'pct_above_18': np.sum(u_interior > 18) / u_interior.size * 100,
-        'pct_below_15': np.sum(u_interior < 15) / u_interior.size * 100,
-    }
+def sor_cupy_fixed(u, interior_mask, max_iter, atol=1e-4, omega=1.9, check_every=100):
+    u_d    = cp.asarray(u, dtype=cp.float64)
+    mask_d = cp.asarray(interior_mask)
+    H, W = mask_d.shape
+    ii = cp.arange(H).reshape(-1, 1)
+    jj = cp.arange(W).reshape(1, -1)
+    parity_even = ((ii + jj) & 1) == 0
+    red_mask   = mask_d &  parity_even
+    black_mask = mask_d & ~parity_even
+    inner = u_d[1:-1, 1:-1]
+    omega_c = 1.0 - omega
 
+    for i in range(max_iter):
+        check_now = (i + 1) % check_every == 0
+        if check_now:
+            u_prev = inner.copy()
+
+        gs = 0.25 * (u_d[1:-1, :-2] + u_d[1:-1, 2:] + u_d[:-2, 1:-1] + u_d[2:, 1:-1])
+        inner[:] = cp.where(red_mask, omega_c * inner + omega * gs, inner)
+
+        gs = 0.25 * (u_d[1:-1, :-2] + u_d[1:-1, 2:] + u_d[:-2, 1:-1] + u_d[2:, 1:-1])
+        inner[:] = cp.where(black_mask, omega_c * inner + omega * gs, inner)
+
+        if check_now:
+            delta = cp.abs(inner - u_prev).max()
+            if float(delta) < atol:
+                break
+
+    return cp.asnumpy(u_d)
+
+
+SOLVERS = {
+    'jacobi': jacobi_cupy_fixed,
+    'sor':    sor_cupy_fixed,
+}
+
+
+def summary_stats(u, interior_mask):
+    u_interior = u[1:-1, 1:-1][interior_mask]
+    mean_temp = u_interior.mean()
+    std_temp = u_interior.std()
+    pct_above_18 = np.sum(u_interior > 18) / u_interior.size * 100
+    pct_below_15 = np.sum(u_interior < 15) / u_interior.size * 100
+    return {'mean_temp': mean_temp, 'std_temp': std_temp,
+            'pct_above_18': pct_above_18, 'pct_below_15': pct_below_15}
 
 if __name__ == '__main__':
-    N = int(sys.argv[1])
-
+    LOAD_DIR = '/dtu/projects/02613_2025/data/modified_swiss_dwellings/'
     with open(join(LOAD_DIR, 'building_ids.txt'), 'r') as f:
-        building_ids = f.read().splitlines()[:N]
+        building_ids = f.read().splitlines()
 
-    # Warm-up: trigger CuPy/CUDA initialization and kernel compilation
-    _u_dummy = cp.zeros((32, 32), dtype=cp.float32)
-    _mask_dummy = cp.ones((30, 30), dtype=bool)
-    _ = jacobi_cupy_fixed(_u_dummy, _mask_dummy, 5, 1e-6)
-    cp.cuda.Stream.null.synchronize()
+    # CLI: python simulate_cupy_fixed.py <N> [method] [omega]
+    #   method: 'jacobi' (default) or 'sor'
+    #   omega:  only used by sor; default 1.9
+    N      = int(sys.argv[1])         if len(sys.argv) > 1 else 1
+    method = sys.argv[2].lower()      if len(sys.argv) > 2 else 'jacobi'
+    omega  = float(sys.argv[3])       if len(sys.argv) > 3 else 1.9
 
-    t0 = time.perf_counter()
-    results = []
+    if method not in SOLVERS:
+        print(f"Unknown method '{method}'. Choose from: {list(SOLVERS)}",
+              file=sys.stderr)
+        sys.exit(1)
+    solver = SOLVERS[method]
+
+    # Build solver kwargs (only sor takes omega)
+    solver_kwargs = {'omega': omega} if method == 'sor' else {}
+
+    building_ids = building_ids[:N]
+
+    MAX_ITER = 20_000
+    ABS_TOL = 1e-4
+
+    # Warm up
+    print(f"Warming up ({method})...", flush=True)
+    u0, mask0 = load_data(LOAD_DIR, building_ids[0])
+    _ = solver(u0, mask0, max_iter=1, **solver_kwargs)
+    print("Ready.", flush=True)
+
+    t0 = time.time()
+    all_results = []
     for bid in building_ids:
-        u0_host, mask_host = load_data(bid)
-        u0_gpu   = cp.asarray(u0_host, dtype=cp.float32)
-        mask_gpu = cp.asarray(mask_host)
-        u_gpu = jacobi_cupy_fixed(u0_gpu, mask_gpu, MAX_ITER, ABS_TOL)
-        u_host = cp.asnumpy(u_gpu)
-        stats = summary_stats(u_host, mask_host)
-        results.append((bid, stats))
+        u, interior_mask = load_data(LOAD_DIR, bid)
+        u = solver(u, interior_mask, MAX_ITER, ABS_TOL, **solver_kwargs)
+        stats = summary_stats(u, interior_mask)
+        all_results.append((bid, stats))
+    elapsed = time.time() - t0
 
-    cp.cuda.Stream.null.synchronize()
-    t1 = time.perf_counter()
+    extra = f", omega={omega}" if method == 'sor' else ""
+    print(f"# method={method}{extra}, N={N}, time={elapsed:.2f}s", flush=True)
 
     stat_keys = ['mean_temp', 'std_temp', 'pct_above_18', 'pct_below_15']
-    print('building_id,' + ','.join(stat_keys))
-    for bid, stats in results:
-        print(f"{bid}," + ",".join(str(stats[k]) for k in stat_keys))
-
-    print(f"# elapsed: {t1 - t0:.3f} s, N: {N}, cupy_fixed (check every {CHECK_EVERY})",
-          file=sys.stderr)
+    print('building_id, ' + ', '.join(stat_keys))
+    for bid, stats in all_results:
+        print(f"{bid},", ", ".join(str(stats[k]) for k in stat_keys))
